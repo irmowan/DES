@@ -129,6 +129,37 @@ def list_xor(x, y):
     return [(a[0] ^ a[1]) for a in list(zip(x, y))]
 
 
+def DES(Key, Message):
+    C = []
+    D = []
+    K = []
+    L = []
+    R = []
+    C.append([Key[x] for x in PC1[0:28]])
+    D.append([Key[x] for x in PC1[28:56]])
+    for i in range(16):
+        move = Round_Left[i]
+        C.append(C[-1][move:] + C[-1][:move])
+        D.append(D[-1][move:] + D[-1][:move])
+        CD = C[-1] + D[-1]
+        K.append([CD[x] for x in PC2])
+    L.append([Message[x] for x in IP[0:32]])
+    R.append([Message[x] for x in IP[32:64]])
+    for i in range(15):
+        L.append(R[i])
+        R.append(list_xor(L[i], f(R[i], K[i])))
+    # 16th Round
+    L.append(list_xor(L[15], f(R[15], K[15])))
+    R.append(L[15])
+    LR = L[16] + R[16]
+    cipher = [LR[x] for x in IP_inverse]
+
+    s = ""
+    for i in range(64):
+        s += str(cipher[i])
+    return s
+
+
 print("hello, DES!")
 
 
@@ -144,36 +175,26 @@ while True:
 print(Key)
 
 # Key = '1010101010101010101010101010101010101010101010101010101010101010'
-Message = '1010101010101010101010101010101010101010101010101010101010101010'
+Message = '1010101010101010101010101010101010101010101010101010101010101010' + \
+          '1000100010001000100010001000100010001000100010001000100010001000' + \
+          '1111000011110000111100001111000011110000111100001111000011110000'
+
+IV = '1010101010101010101010101010101010101010101010101010101010101010'
+print('IV:          ', IV)
+IV = [int(x) for x in IV]
+
 print('Key:         ', Key)
 print('Plain Text:  ', Message)
 Key = [int(x) for x in Key]
 Message = [int(x) for x in Message]
-C = []
-D = []
-K = []
-L = []
-R = []
-C.append([Key[x] for x in PC1[0:28]])
-D.append([Key[x] for x in PC1[28:56]])
-for i in range(16):
-    move = Round_Left[i]
-    C.append(C[-1][move:] + C[-1][:move])
-    D.append(D[-1][move:] + D[-1][:move])
-    CD = C[-1] + D[-1]
-    K.append([CD[x] for x in PC2])
-L.append([Message[x] for x in IP[0:32]])
-R.append([Message[x] for x in IP[32:64]])
-for i in range(15):
-    L.append(R[i])
-    R.append(list_xor(L[i], f(R[i], K[i])))
-# 16th Round
-L.append(list_xor(L[15], f(R[15], K[15])))
-R.append(L[15])
-LR = L[16] + R[16]
-cipher = [LR[x] for x in IP_inverse]
 
-s = ""
-for i in range(64):
-    s += str(cipher[i])
-print('Cipher Text: ', s)
+cipher = ''
+for i in range(int(len(Message) / 64)):
+    m = Message[64 * i:64 * i + 64]
+    if i == 0:
+        cipher += DES(list_xor(m, IV), Key)
+    else:
+        last_cipher = cipher[-64:]
+        last_cipher_list = [int(last_cipher[x]) for x in range(64)]
+        cipher += DES(list_xor(m, last_cipher_list), Key)
+print('Cipher Text: ', cipher)
