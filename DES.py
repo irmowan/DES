@@ -78,6 +78,13 @@ Sbox = [
      7, 11, 4, 1, 9, 12, 14, 2, 0, 6, 10, 13, 15, 3, 5, 8,
      2, 1, 14, 7, 4, 10, 8, 13, 15, 12, 9, 0, 3, 5, 6, 11],
 ]
+
+P = [
+    15, 6, 19, 20, 28, 11, 27, 16,
+    0, 14, 22, 25, 4, 17, 30, 9,
+    1, 7, 23, 13, 31, 26, 2, 8,
+    18, 12, 29, 5, 21, 10, 3, 24]
+
 Round_Left = [
     1, 1, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 1]
 
@@ -122,14 +129,15 @@ def f(R, K):
     R_EP = [R[x] for x in E]
     sbox_in = list_xor(R_EP, K)
     sbox_out = s_box(sbox_in)
-    return sbox_out
+    P_EP = [sbox_out[x] for x in P]
+    return P_EP
 
 
 def list_xor(x, y):
     return [(a[0] ^ a[1]) for a in list(zip(x, y))]
 
 
-def DES(Key, Message):
+def DES(Message, Key):
     C = []
     D = []
     K = []
@@ -145,13 +153,10 @@ def DES(Key, Message):
         K.append([CD[x] for x in PC2])
     L.append([Message[x] for x in IP[0:32]])
     R.append([Message[x] for x in IP[32:64]])
-    for i in range(15):
+    for i in range(16):
         L.append(R[i])
         R.append(list_xor(L[i], f(R[i], K[i])))
-    # 16th Round
-    L.append(list_xor(L[15], f(R[15], K[15])))
-    R.append(L[15])
-    LR = L[16] + R[16]
+    LR = R[-1][:] + L[-1][:]
     cipher = [LR[x] for x in IP_inverse]
 
     s = ""
