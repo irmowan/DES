@@ -240,6 +240,12 @@ def legality(Key, IV, Message):
         return 0
     return 1
 
+def generating_IV():
+    import random
+    s = ''
+    for i in range(64):
+        s += str(random.randint(0,1))
+    return s
 
 def main():
     print('Hello, DES!')
@@ -264,11 +270,10 @@ def main():
 
     # Read input from files
     file_Key = open('Key.txt', 'r')
-    file_IV = open('IV.txt', 'r')
     file_Text = open('Text.txt', 'r')
+    IV = generating_IV()
     Key = file_Key.read().strip()
     Message = file_Text.read().strip()
-    IV = file_IV.read().strip()
 
     print('IV:     ', IV)
     print('Key:    ', Key)
@@ -299,11 +304,10 @@ def main():
             last_cipher_list = [int(last_cipher[x]) for x in range(64)]
             cipher += DES(list_xor(m, last_cipher_list), Key)
         print('Result: ', cipher)
-
         return
     else:
         # Check input
-        if (len(Message) % 64 != 0) or (len(Message) <= 128):
+        if (len(Message) % 64 != 0) or (len(Message) < 128):
             print('The length of cipher text must be multiple of 64, and at least 128.')
             return
 
@@ -321,7 +325,6 @@ def main():
                 result += list2string(list_xor(result_temp, last_text))
         result = unpadding(result)
         print('Result: ', result)
-
     return
 
 
