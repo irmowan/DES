@@ -240,27 +240,17 @@ def legality(Key, IV, Message):
         return 0
     return 1
 
+
 def generating_IV():
     import random
     s = ''
     for i in range(64):
-        s += str(random.randint(0,1))
+        s += str(random.randint(0, 1))
     return s
+
 
 def main():
     print('Hello, DES!')
-
-    #
-    # print("Please input your primary key:")
-    # while True:
-    #     Key = input().strip()
-    #     if len(Key) != 64:
-    #         print('The length of Key should be 64 bits, please check it and input again.')
-    #         continue
-    #     if not (re.match('[01]*[^01]', Key)):
-    #         break
-    #     print('The input Key is not a 01 string, please check it and input again.')
-    # print(Key)
 
     # Choose a type
     print('1. Encrypt a plain text')
@@ -304,7 +294,6 @@ def main():
             last_cipher_list = [int(last_cipher[x]) for x in range(64)]
             cipher += DES(list_xor(m, last_cipher_list), Key)
         print('Result: ', cipher)
-        return
     else:
         # Check input
         if (len(Message) % 64 != 0) or (len(Message) < 128):
