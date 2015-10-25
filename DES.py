@@ -111,6 +111,24 @@ PC2 = [
     43, 48, 38, 55, 33, 52,
     45, 41, 49, 35, 28, 31]
 
+global CIRCLE
+CIRCLE = 6
+
+
+# Above is constants
+# Below is functions
+
+def list2string(l):
+    s = ''
+    for i in range(len(l)):
+        s += str(l[i])
+    return s
+
+
+def string2list(s):
+    l = [int(x) for x in s]
+    return l
+
 
 def s_box(sbox_in):
     sbox_out = []
@@ -137,69 +155,174 @@ def list_xor(x, y):
     return [(a[0] ^ a[1]) for a in list(zip(x, y))]
 
 
-def DES(Message, Key):
+# Return a list of subkeys
+def generating_key(Key):
     C = []
     D = []
     K = []
-    L = []
-    R = []
     C.append([Key[x] for x in PC1[0:28]])
     D.append([Key[x] for x in PC1[28:56]])
+    # Generating subkeys
     for i in range(16):
         move = Round_Left[i]
         C.append(C[-1][move:] + C[-1][:move])
         D.append(D[-1][move:] + D[-1][:move])
         CD = C[-1] + D[-1]
         K.append([CD[x] for x in PC2])
+    return K
+
+
+# Type decides encrypt or decrypt
+# Key will be used to generate subkeys
+# Default type is encrypting
+def DES(Message, Key, Type=1):
+    L = []
+    R = []
+    K = generating_key(Key)
     L.append([Message[x] for x in IP[0:32]])
     R.append([Message[x] for x in IP[32:64]])
-    for i in range(16):
-        L.append(R[i])
-        R.append(list_xor(L[i], f(R[i], K[i])))
-    LR = R[-1][:] + L[-1][:]
-    cipher = [LR[x] for x in IP_inverse]
+    # Here it should run CIRCLE times
+    if Type == 1:
+        for i in range(CIRCLE):
+            L.append(R[i])
+            R.append(list_xor(L[i], f(R[i], K[i])))
+        LR = R[-1][:] + L[-1][:]
+        result = [LR[x] for x in IP_inverse]
+    else:
+        for i in range(CIRCLE):
+            L.append(R[i])
+            R.append(list_xor(L[i], f(R[i], K[CIRCLE - i - 1])))
+        LR = R[-1][:] + L[-1][:]
+        result = [LR[x] for x in IP_inverse]
+    # Change a list to string
+    return list2string(result)
 
-    s = ""
-    for i in range(64):
-        s += str(cipher[i])
+
+# Padding a message
+def padding(Message):
+    num_padding = int(8 - (len(Message) % 64) / 8)
+    for i in range(num_padding):
+        s_padding = '{0:08b}'.format(num_padding)
+        for j in range(8):
+            Message.append(int(s_padding[j]))
+    return Message
+
+
+def unpadding(result):
+    s = result;
+    num_padding = int(result[-8:], 2)
+    flag = 1
+    if num_padding <= 0 or num_padding > 8:
+        print("Padding is incorrect")
+    for i in range(1, num_padding):
+        if int(result[-8 * i - 8:-8 * i], 2) != num_padding:
+            flag = 0
+    if flag == 1:
+        s = result[:-8 * num_padding]
     return s
 
 
-print("hello, DES!")
-
-
-print("Please input your primary key:")
-while True:
-    Key = input().strip()
+def legality(Key, IV, Message):
     if len(Key) != 64:
         print('The length of Key should be 64 bits, please check it and input again.')
-        continue
-    if not (re.match('[01]*[^01]', Key)):
-        break
-    print('The input Key is not a 01 string, please check it and input again.')
-print(Key)
+        return 0
+    if len(IV) != 64:
+        print('The length of IV should be 64 bits, please check it and input again.')
+        return 0
+    if re.match('[01]*[^01]', Key) == 1:
+        print('The input Key is not a 01 string.')
+        return 0
+    if re.match('[01]*[^01]', IV) == 1:
+        print('The input IV is not a 01 string.')
+        return 0
+    if re.match('[01]*[^01]', Message) == 1:
+        print('The input text is not a 01 string.')
+        return 0
+    return 1
 
-# Key = '1010101010101010101010101010101010101010101010101010101010101010'
-Message = '1010101010101010101010101010101010101010101010101010101010101010' + \
-          '1000100010001000100010001000100010001000100010001000100010001000' + \
-          '1111000011110000111100001111000011110000111100001111000011110000'
 
-IV = '1010101010101010101010101010101010101010101010101010101010101010'
-print('IV:          ', IV)
-IV = [int(x) for x in IV]
+def main():
+    print('Hello, DES!')
 
-print('Key:         ', Key)
-print('Plain Text:  ', Message)
-Key = [int(x) for x in Key]
-Message = [int(x) for x in Message]
+    #
+    # print("Please input your primary key:")
+    # while True:
+    #     Key = input().strip()
+    #     if len(Key) != 64:
+    #         print('The length of Key should be 64 bits, please check it and input again.')
+    #         continue
+    #     if not (re.match('[01]*[^01]', Key)):
+    #         break
+    #     print('The input Key is not a 01 string, please check it and input again.')
+    # print(Key)
 
-cipher = ''
-for i in range(int(len(Message) / 64)):
-    m = Message[64 * i:64 * i + 64]
-    if i == 0:
-        cipher += DES(list_xor(m, IV), Key)
+    # Choose a type
+    print('1. Encrypt a plain text')
+    print('2. Decrypt a cipher text')
+    print('Enter the choice(1 or 2):')
+    choice = int(input())
+
+    # Read input from files
+    file_Key = open('Key.txt', 'r')
+    file_IV = open('IV.txt', 'r')
+    file_Text = open('Text.txt', 'r')
+    Key = file_Key.read().strip()
+    Message = file_Text.read().strip()
+    IV = file_IV.read().strip()
+
+    print('IV:     ', IV)
+    print('Key:    ', Key)
+    print('Text:   ', Message)
+    print()
+
+    # Check legality of input
+    if legality(Key, IV, Message) == 0:
+        return
+
+    IV = string2list(IV)
+    Key = string2list(Key)
+    Message = string2list(Message)
+    if choice == 1:
+        # Check input
+        if (len(Message) % 8 != 0) or (len(Message) == 0):
+            print('The length of plain text must be multiple of 8, and could not be 0.')
+            return
+        Message = padding(Message)
+
+        # Encrypt a plain text
+        print('Encrypt plain text:')
+        cipher = ''
+        cipher += DES(IV, Key)
+        for i in range(int(len(Message) / 64)):
+            m = Message[64 * i:64 * i + 64]
+            last_cipher = cipher[-64:]
+            last_cipher_list = [int(last_cipher[x]) for x in range(64)]
+            cipher += DES(list_xor(m, last_cipher_list), Key)
+        print('Result: ', cipher)
+
+        return
     else:
-        last_cipher = cipher[-64:]
-        last_cipher_list = [int(last_cipher[x]) for x in range(64)]
-        cipher += DES(list_xor(m, last_cipher_list), Key)
-print('Cipher Text: ', cipher)
+        # Check input
+        if (len(Message) % 64 != 0) or (len(Message) <= 128):
+            print('The length of cipher text must be multiple of 64, and at least 128.')
+            return
+
+        # Decrypt a cipher text
+        print('Decrypt cipher text:')
+        result = ''
+        IV = ''
+        for i in range(int(len(Message) / 64)):
+            m = Message[64 * i:64 * i + 64]
+            if i == 0:
+                IV = DES(m, Key, 2)
+            else:
+                result_temp = [int(x) for x in DES(m, Key, 2)]
+                last_text = Message[64 * i - 64:64 * i]
+                result += list2string(list_xor(result_temp, last_text))
+        result = unpadding(result)
+        print('Result: ', result)
+
+    return
+
+
+main()
